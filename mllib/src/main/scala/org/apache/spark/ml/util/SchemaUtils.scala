@@ -39,6 +39,17 @@ private[spark] object SchemaUtils {
   }
 
   /**
+   * Check whether the given schema contains a column of the one of the specified data types.
+   * @param colName  column name
+   * @param dataType  required column data type
+   */
+  def checkColumnType(schema: StructType, colName: String, dataType: Seq[DataType]): Unit = {
+    val actualDataType = schema(colName).dataType
+    require(dataType.contains(actualDataType),
+      s"Column $colName must be one of the types $dataType but was actually $actualDataType.")
+  }
+
+  /**
    * Appends a new column to the input schema. This fails if the given output column already exists.
    * @param schema input schema
    * @param colName new column name. If this column name is an empty string "", this method returns

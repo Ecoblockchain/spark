@@ -19,7 +19,7 @@ package org.apache.spark.examples.ml
 
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.classification.{LogisticRegression, OneVsRest}
-import org.apache.spark.ml.feature.{HashingTF, StringIndexer, Tokenizer}
+import org.apache.spark.ml.feature._
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.hive.HiveContext
@@ -112,10 +112,23 @@ object ComplexPipelineExample {
       .setInputCol("text")
       .setOutputCol("words")
 
+    // train a word2vec model
+    val word2vec = new Word2Vec()
+      .setInputCol(tokenizer.getOutputCol)
+      .setOutputCol("w2v")
+      .setMaxIter(10)
+      .setSeed(42L)
+      .setVectorSize(1000)
+
     // extract hash based TF-IDF features
     val hashingTF = new HashingTF()
       .setNumFeatures(1000)
       .setInputCol(tokenizer.getOutputCol)
+      .setOutputCol("tfidf")
+
+    // combine W2V and TFIDF features
+    val featureCombiner = new VectorAssembler()
+      .setInputCols(Array(word2vec.getOutputCol, hashingTF.getOutputCol))
       .setOutputCol("features")
 
     val lr = new LogisticRegression()
@@ -128,7 +141,7 @@ object ComplexPipelineExample {
       .setClassifier(lr)
 
     val pipeline = new Pipeline()
-      .setStages(Array(labelIndexer, tokenizer, hashingTF, ovr))
+      .setStages(Array(labelIndexer, tokenizer, word2vec, hashingTF, featureCombiner, ovr))
 
     val model = pipeline.fit(train)
     val predictions = model.transform(test).cache()
