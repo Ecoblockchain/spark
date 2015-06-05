@@ -18,7 +18,7 @@
 package org.apache.spark.examples.ml
 
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.classification.{LogisticRegression, OneVsRest}
+import org.apache.spark.ml.classification.RandomForestClassifier
 import org.apache.spark.ml.feature.{HashingTF, StringIndexer, Tokenizer}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.sql.Row
@@ -118,17 +118,15 @@ object ComplexPipelineExample {
       .setInputCol(tokenizer.getOutputCol)
       .setOutputCol("features")
 
-    val lr = new LogisticRegression()
-      .setLabelCol(labelIndexer.getOutputCol)
-      .setMaxIter(10)
-      .setRegParam(0.001)
-
     // learn multiclass classifier with Logistic Regression as base classifier
-    val ovr = new OneVsRest()
-      .setClassifier(lr)
+    val rf = new RandomForestClassifier()
+      .setLabelCol(labelIndexer.getOutputCol)
+      .setNumTrees(100)
+      .setMaxDepth(7)
+      .setSeed(42L)
 
     val pipeline = new Pipeline()
-      .setStages(Array(labelIndexer, tokenizer, hashingTF, ovr))
+      .setStages(Array(labelIndexer, tokenizer, hashingTF, rf))
 
     val model = pipeline.fit(train)
     val predictions = model.transform(test).cache()
