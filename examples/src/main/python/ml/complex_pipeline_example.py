@@ -19,8 +19,10 @@ from __future__ import print_function
 
 from pyspark import SparkContext, SparkConf
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.classification import LogisticRegression, OneVsRest
 from pyspark.ml.feature import HashingTF, StringIndexer, Tokenizer
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.mllib.evaluation import MulticlassMetrics
 from pyspark.sql import HiveContext, Row
 
@@ -109,12 +111,24 @@ if __name__ == "__main__":
                           outputCol = "features")
 
     # learn multiclass classifier with Logistic Regression as base classifier
-    rf = RandomForestClassifier(numTrees=10, maxDepth=7, labelCol="label", seed=42)
+    lr = LogisticRegression(maxIter = 10)
 
-    pipeline = Pipeline(stages = [labelIndexer, tokenizer, hashingTF, rf])
+    ovr = OneVsRest(classifier = lr)
 
-    # train model
-    model = pipeline.fit(train)
+    pipeline = Pipeline(stages = [labelIndexer, tokenizer, hashingTF, ovr])
+
+    paramGrid = ParamGridBuilder() \
+        .addGrid(hashingTF.numFeatures, [10, 100, 1000, 2000, 5000]) \
+        .addGrid(lr.regParam, [0.1, 0.01, 0.001]) \
+        .build()
+    # cross validate
+    cv = CrossValidator(estimator = pipeline,
+                        evaluator = MulticlassClassificationEvaluator,
+                        estimatorParamMaps = paramGrid,
+                        numFolds = 3)
+
+    # select best model
+    model = cv.fit(train)
 
     # score the model
     predictions = model.transform(test).cache()

@@ -18,8 +18,10 @@
 package org.apache.spark.examples.ml
 
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.classification.RandomForestClassifier
+import org.apache.spark.ml.classification.{OneVsRest, LogisticRegression, RandomForestClassifier}
+import org.apache.spark.ml.evaluation.{MulticlassClassificationEvaluator, BinaryClassificationEvaluator}
 import org.apache.spark.ml.feature.{HashingTF, StringIndexer, Tokenizer}
+import org.apache.spark.ml.tuning.{ParamGridBuilder, CrossValidator}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.hive.HiveContext
@@ -119,16 +121,25 @@ object ComplexPipelineExample {
       .setOutputCol("features")
 
     // learn multiclass classifier with Logistic Regression as base classifier
-    val rf = new RandomForestClassifier()
-      .setLabelCol(labelIndexer.getOutputCol)
-      .setNumTrees(100)
-      .setMaxDepth(7)
-      .setSeed(42L)
+    val lr = new LogisticRegression()
 
+    val ovr = new OneVsRest().setClassifier(lr)
     val pipeline = new Pipeline()
-      .setStages(Array(labelIndexer, tokenizer, hashingTF, rf))
+      .setStages(Array(labelIndexer, tokenizer, hashingTF, ovr))
 
-    val model = pipeline.fit(train)
+    // cross validate
+    val paramGrid = new ParamGridBuilder()
+      .addGrid(hashingTF.numFeatures, Array(10, 100, 1000, 2000, 5000))
+      .addGrid(lr.regParam, Array(0.1, 0.01, 0.001))
+      .build()
+
+    val crossval = new CrossValidator()
+      .setEstimator(pipeline)
+      .setEvaluator(new MulticlassClassificationEvaluator())
+      .setNumFolds(3)
+      .setEstimatorParamMaps(paramGrid)
+
+    val model = crossval.fit(train)
     val predictions = model.transform(test).cache()
     val predictionAndLabels = predictions.select($"prediction", $"label")
       .map { case Row(prediction: Double, label: Double) => (prediction, label)}

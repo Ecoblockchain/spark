@@ -69,7 +69,7 @@ class MulticlassClassificationEvaluator (override val uid: String)
     }
     val metrics = new MulticlassMetrics(predictionAndLabels)
     val metric = $(metricName) match {
-      case "f1" => metrics.weightedFMeasure
+      case "f1" => metrics.fMeasure
     }
     metric
   }
