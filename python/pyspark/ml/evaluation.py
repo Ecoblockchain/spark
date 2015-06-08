@@ -212,6 +212,67 @@ class RegressionEvaluator(JavaEvaluator, HasLabelCol, HasPredictionCol):
         kwargs = self.setParams._input_kwargs
         return self._set(**kwargs)
 
+
+@inherit_doc
+class MulticlassClassificationEvaluator(JavaEvaluator, HasLabelCol, HasPredictionCol):
+    """
+    Evaluator for Multiclass Classification, which expects two input
+    columns: prediction and label.
+
+    >>> scoreAndLabels = [(-28.98343821, -27.0), (20.21491975, 21.5),
+    ...   (-25.98418959, -22.0), (30.69731842, 33.0), (74.69283752, 71.0)]
+    >>> dataset = sqlContext.createDataFrame(scoreAndLabels, ["raw", "label"])
+    ...
+    >>> evaluator = MulticlassClassificationEvaluator(predictionCol="raw")
+    >>> evaluator.evaluate(dataset)
+    2.842...
+    """
+    # a placeholder to make it appear in the generated doc
+    metricName = Param(Params._dummy(), "metricName",
+        "metric name in evaluation (fmeasure)")
+
+    @keyword_only
+    def __init__(self, predictionCol="prediction", labelCol="label",
+                 metricName="fmeasure"):
+        """
+        __init__(self, predictionCol="prediction", labelCol="label", \
+                 metricName="fmeasure")
+        """
+        super(MulticlassClassificationEvaluator, self).__init__()
+        self._java_obj = self._new_java_obj(
+            "org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator", self.uid)
+        #: param for metric name in evaluation (fmeasure)
+        self.metricName = Param(self, "metricName",
+                                "metric name in evaluation (fmeasure)")
+        self._setDefault(predictionCol="prediction", labelCol="label",
+                         metricName="fmeasure")
+        kwargs = self.__init__._input_kwargs
+        self._set(**kwargs)
+
+    def setMetricName(self, value):
+        """
+        Sets the value of :py:attr:`metricName`.
+        """
+        self._paramMap[self.metricName] = value
+        return self
+
+    def getMetricName(self):
+        """
+        Gets the value of metricName or its default value.
+        """
+        return self.getOrDefault(self.metricName)
+
+    @keyword_only
+    def setParams(self, predictionCol="prediction", labelCol="label",
+                  metricName="fmeasure"):
+        """
+        setParams(self, predictionCol="prediction", labelCol="label", \
+                  metricName="fmeasure")
+        Sets params for multiclass classification evaluator.
+        """
+        kwargs = self.setParams._input_kwargs
+        return self._set(**kwargs)
+
 if __name__ == "__main__":
     import doctest
     from pyspark.context import SparkContext

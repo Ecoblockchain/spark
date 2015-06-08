@@ -36,12 +36,12 @@ class MulticlassClassificationEvaluator (override val uid: String)
   def this() = this(Identifiable.randomUID("mcEval"))
 
   /**
-   * param for metric name in evaluation (supports `"f1"` (default))
+   * param for metric name in evaluation (supports `"fmeasure"` (default))
    * @group param
    */
   val metricName: Param[String] = {
-    val allowedParams = ParamValidators.inArray(Array("f1"))
-    new Param(this, "metricName", "metric name in evaluation (f1)", allowedParams)
+    val allowedParams = ParamValidators.inArray(Array("fmeasure"))
+    new Param(this, "metricName", "metric name in evaluation (fmeasure)", allowedParams)
   }
 
   /** @group getParam */
@@ -56,7 +56,7 @@ class MulticlassClassificationEvaluator (override val uid: String)
   /** @group setParam */
   def setLabelCol(value: String): this.type = set(labelCol, value)
 
-  setDefault(metricName -> "f1")
+  setDefault(metricName -> "fmeasure")
 
   override def evaluate(dataset: DataFrame): Double = {
     val schema = dataset.schema
@@ -69,7 +69,7 @@ class MulticlassClassificationEvaluator (override val uid: String)
     }
     val metrics = new MulticlassMetrics(predictionAndLabels)
     val metric = $(metricName) match {
-      case "f1" => metrics.fMeasure
+      case "fmeasure" => metrics.fMeasure
     }
     metric
   }
